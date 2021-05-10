@@ -5,7 +5,7 @@
             <v-card-title class="edit-title">
                 <h2>Create Memorial Folder for qweqwe qweqwe</h2>
                 <v-spacer></v-spacer>
-                <v-btn v-else :to="{ name: 'Services' }" class="mr-4">Back to services</v-btn>
+                <v-btn :to="{ name: 'Services' }" class="mr-4">Back to services</v-btn>
             </v-card-title>
             <p>This tool converts your memorial folder into an embeddable PDF, which can be displayed on your website. We will create a thumbnail of the PDF, which will turn into a link that viewers can click on to view the PDF.</p>
             <p>To get started, click "Add a PDF" and browse to your memorial folder.</p>
