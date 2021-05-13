@@ -107,7 +107,23 @@
                         </v-row>
                     </v-form>
                 </div>
+                <div v-if="tab === 3" class="tab-container">
+                    <v-form ref="form" lazy-validation>
+                        <div class="header justify-content-center">
+                            <h3 class="title text-center">Your thumbnail is ready for your Website!</h3>
+                        </div>
+                        <v-row>
+                            <v-col class="text-center">
+                                <h5>Copy and Paste the code below into your website</h5>
+                                <embed-modal v-if="embedHtml" :slug="embedHtml"/>
+                            </v-col>
+                        </v-row>
+                    </v-form>
+                </div>
             </div>
+            <v-snackbar v-model="snackbar" :timeout="3000">
+                {{ message }}
+            </v-snackbar>
         </div>
         <Spinner v-if="loading"></Spinner>
     </div>
@@ -115,13 +131,14 @@
 
 <script>
     import Spinner from '../components/Spinner';
-    import {ArrowLeftIcon} from 'vue-feather-icons';
+    import {ArrowLeftIcon, CopyIcon} from 'vue-feather-icons';
     import {Cropper} from 'vue-advanced-cropper';
     import 'vue-advanced-cropper/dist/style.css';
+    import EmbedModal from '../components/EmbedModal';
 
     export default {
         metaInfo: {
-            title: 'Create PDF',
+            title: 'Converter PDF',
         },
         data() {
             return {
@@ -133,10 +150,13 @@
                 selectedPage: null,
                 title: null,
                 errorMessage: false,
+                message: null,
                 cropInstruction: [],
+                embedHtml: null,
+                snackbar: false,
                 croppedBody: {
                     serviceId: 0,
-                    titleText: '',
+                    titleText: "test's Memorial Folder",
                     images: [],
                     selectedImageURL: '',
                     cropInstruction: {
@@ -156,6 +176,8 @@
             Spinner,
             Cropper,
             ArrowLeftIcon,
+            CopyIcon,
+            EmbedModal,
         },
 
         methods: {
@@ -193,20 +215,42 @@
                 this.croppedBody.cropInstruction.y = coordinates.top;
             },
             cropImage() {
-                this.croppedBody.serviceId = this.$route.params.id;
-                this.croppedBody.selectedImageURL = this.selectedPage;
+                this.croppedBody.serviceId = +this.$route.params.id;
+                this.croppedBody.selectedImageURL = this.imageUrls[this.selectedPage];
                 this.croppedBody.images = this.imageUrls;
-
                 this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
                     .post(process.env.VUE_APP_API + '/pdf/crop', this.croppedBody)
                     .then(res => {
-                        console.log(res);
+                        this.embedHtml = this.renderEmbed(res.data.imageLink, res.data.titleText, res.data.pdfLink);
                         this.loading = false;
+                        this.tab = 3;
                     })
                     .catch(error => {
                         this.errorMessage = error.response.data;
                         this.loading = false;
                     });
+            },
+            copyEmbedCode(e) {
+                let textarea = this.$refs.embedCode.$el.querySelector('textarea');
+                textarea.select();
+                document.execCommand('copy');
+                textarea.blur();
+                this.message = 'Embed code copied to your clipboard';
+                this.snackbar = true;
+            },
+            renderEmbed(imageSrc, title, urlSrc) {
+                return `<center>
+                    <a href="${urlSrc}"
+                       target="_blank">
+                        <br>
+                        <img style="border:0;width:220px;box-shadow: 10px 10px 10px rgba(0,0,0,0.3);margin-bottom: 24px;margin-top: 30px;"
+                             src="${imageSrc}"/>
+                        <br>
+                        <div style=";border: 1px solid #565656b3;max-width: 400px;width: fit-content;padding: 11px 31px;margin-bottom: 40px;font-size: 18px;margin-top: 1px;background: rgba(255,255,255,0.5);font-family: 'Lato';font-weight: 600; color:#333;text-decoration-line:none">
+                           ${title}
+                        </div>
+                    </a>
+                </center>`;
             }
         }
     }
@@ -220,7 +264,6 @@
     .view-container {
         width: 64vw;
         margin: auto;
-        // text-align: center;
         position: relative;
         background: #fff;
         z-index: 1;
@@ -554,6 +597,15 @@
     .pdf-page img {
         width: 220px;
         box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3)
+    }
+
+    .v-text-field__slot textarea {
+        color: red !important;
+    }
+
+    .theme--light.v-input textarea {
+        color: red !important;
+        padding: 0 20px;
     }
 
     @keyframes pulse-red {
