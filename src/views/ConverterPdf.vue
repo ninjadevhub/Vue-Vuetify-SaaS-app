@@ -51,6 +51,7 @@
                                         show-size
                                         label="Upload PDF"
                                         @change="uploadPdf"
+                                        :rules="errorMessage ? [errorMessage]: []"
                                 ></v-file-input>
                             </v-col>
                         </v-row>
@@ -76,18 +77,26 @@
                 <div v-if="tab === 2" class="tab-container">
                     <v-form ref="form" lazy-validation>
                         <div class="header">
-                            <h3 class="title">Type the title of the memorial folder into the text-box. Drag the mouse over the image,
+                            <h3 class="title">Type the title of the memorial folder into the text-box. Drag the mouse
+                                over the image,
                                 to crop the selection. Your selection will be displayed on the webpage.</h3>
                         </div>
                         <v-row>
                             <v-col class="text-center">
-                                <v-text-field v-model="title" label="Title"></v-text-field>
+                                <v-text-field v-model="croppedBody.titleText" label="Title"></v-text-field>
                             </v-col>
                         </v-row>
                         <v-row>
                             <v-col class="text-center">
                                 <a href="javascript:void(0)" class="pdf-page">
-                                    <img :src="imageUrls[selectedPage]"/>
+                                    <cropper
+                                            class="cropper"
+                                            :src="imageUrls[selectedPage]"
+                                            :stencil-props="{
+                                              aspectRatio: 8/5
+                                            }"
+                                            @change="changeCrop"
+                                    ></cropper>
                                 </a>
                             </v-col>
                         </v-row>
@@ -107,8 +116,8 @@
 <script>
     import Spinner from '../components/Spinner';
     import {ArrowLeftIcon} from 'vue-feather-icons';
-    // import { Cropper } from 'vue-advanced-cropper';
-    // import 'vue-advanced-cropper/dist/style.css';
+    import {Cropper} from 'vue-advanced-cropper';
+    import 'vue-advanced-cropper/dist/style.css';
 
     export default {
         metaInfo: {
@@ -122,12 +131,30 @@
                 token: null,
                 loading: false,
                 selectedPage: null,
-                title: null
+                title: null,
+                errorMessage: false,
+                cropInstruction: [],
+                croppedBody: {
+                    serviceId: 0,
+                    titleText: '',
+                    images: [],
+                    selectedImageURL: '',
+                    cropInstruction: {
+                        x: 0,
+                        y: 0,
+                        width: 0,
+                        height: 0,
+                        rotate: 0,
+                        scaleX: 0,
+                        scaleY: 0
+                    }
+                }
             }
         },
 
         components: {
             Spinner,
+            Cropper,
             ArrowLeftIcon,
         },
 
@@ -136,7 +163,6 @@
                 this.loading = true;
                 this.$auth.getIdTokenClaims().then(result => {
                     this.token = result.__raw;
-
                     var fd = new FormData();
                     fd.append("File", file);
                     fd.append("ServiceId", this.$route.params.id);
@@ -148,20 +174,39 @@
                             this.loading = false;
                         })
                         .catch(error => {
+                            this.errorMessage = error.response.data;
                             this.imageUrls = [];
                             this.loading = false;
-                            this.errorLoading = true;
                         })
                 })
             },
-            chooseImage(){
-                if (!this.selectedPage){
+            chooseImage() {
+                if (this.selectedPage === null) {
                     return false
                 }
                 this.tab = 2;
             },
-            cropImage(){
-                alert('In the process of development')
+            changeCrop({coordinates}) {
+                this.croppedBody.cropInstruction.width = coordinates.width;
+                this.croppedBody.cropInstruction.height = coordinates.height;
+                this.croppedBody.cropInstruction.x = coordinates.left;
+                this.croppedBody.cropInstruction.y = coordinates.top;
+            },
+            cropImage() {
+                this.croppedBody.serviceId = this.$route.params.id;
+                this.croppedBody.selectedImageURL = this.selectedPage;
+                this.croppedBody.images = this.imageUrls;
+
+                this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
+                    .post(process.env.VUE_APP_API + '/pdf/crop', this.croppedBody)
+                    .then(res => {
+                        console.log(res);
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        this.errorMessage = error.response.data;
+                        this.loading = false;
+                    });
             }
         }
     }
