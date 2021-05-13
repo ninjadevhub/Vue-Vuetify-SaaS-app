@@ -9,7 +9,7 @@
                 <div v-if="editing">
                     <v-tooltip bottom>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn :to="{ path: `/manage-services/${ serviceId }/create-pdf` }" v-bind="attrs"
+                            <v-btn :disabled="pdfEmbedCode" :to="{ path: `/manage-services/${ serviceId }/converter-pdf` }" v-bind="attrs"
                                    v-on="on" fab color="#9093b6" dark class="mr-2" small>
                                 <file-text-icon size="1.5x"></file-text-icon>
                             </v-btn>
@@ -204,16 +204,21 @@
                             </v-col>
                         </v-row> -->
 
-                         <v-textarea v-if="embedCode.length" v-model="embedCode" disabled outlined class="mt-4" label="Embed Code"></v-textarea>
+                        <v-textarea v-if="embedCode.length" v-model="embedCode" disabled outlined class="mt-4"
+                                    label="Embed Code"></v-textarea>
                         <div v-if="embedCode.length" class="text-right" style="margin-top: -1rem">
-                            <v-btn @click="copyText(embedCode)" text><copy-icon size="1x" class="mr-2"></copy-icon> Copy Embed Code</v-btn>
+                            <v-btn @click="copyText(embedCode)" text>
+                                <copy-icon size="1x" class="mr-2"></copy-icon>
+                                Copy Embed Code
+                            </v-btn>
                         </div>
 
                         <v-checkbox v-if="!editing" v-model="testService" label="Test Service"></v-checkbox>
 
                         <div class="mt-2 mb-6">
                             <v-btn v-if="!busy && !uploadingPlaceholderImg" @click.prevent="saveService($data)" block
-                                   color="#0C3C60" dark large class="save-btn">{{ editing ? 'Update Service' : 'SaveService' }}
+                                   color="#0C3C60" dark large class="save-btn">{{ editing ? 'Update Service' :
+                                'SaveService' }}
                             </v-btn>
                             <v-btn v-else block disabled class="ml-3 save-btn">
                                 <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -562,7 +567,11 @@
 
             <div v-if="editing" class="view-container">
                 <h5>Embed code</h5>
-                <embed-modal v-if="videoSlug" :slug="videoSlug"/>
+                <embed-modal v-if="videoSlug" :slug="embedVideoSlug"/>
+            </div>
+            <div v-if="editing" class="view-container mt-5">
+                <h5>Copy this Code to Embed your PDF</h5>
+                <embed-modal v-if="pdfEmbedCode" :slug="pdfEmbedCode"/>
             </div>
 
             <ServiceBillingCharts v-if="editing" :id="$route.params.id" :token="token" ref="billingCharts"/>
@@ -659,6 +668,8 @@
                 serviceTime: '',
                 testService: false,
                 embedCode: '',
+                embedVideoSlug: '',
+                pdfEmbedCode: null,
                 convertedVideoLink: '',
                 showViewer: false,
                 viewerSrc: {},
@@ -835,8 +846,6 @@
                         .create({headers: {'Authorization': `Bearer ${this.token}`}})
                         .get(process.env.VUE_APP_API + `/Services/${id}`)
                         .then(response => {
-                            console.log('service')
-                            console.log(response.data)
                             let result = response.data;
                             this.firstName = result.firstName;
                             this.lastName = result.lastName;
@@ -846,9 +855,11 @@
                             this.testService = result.test;
                             this.embedCode = "";
                             this.service = response.data;
+                            this.embedVideoSlug = this.renderEmbed();
 
                             // get events once
                             this.getEvents()
+                            this.getPdf()
                         })
                         .catch(error => {
                             console.log(error)
@@ -865,8 +876,7 @@
 
                 // item.eventType + 1 TO HIDE TRIBUTE
 
-                this.axios
-                    .create({headers: {'Authorization': `Bearer ${this.token}`}})
+                this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
                     .get(process.env.VUE_APP_API + `/events/list/${this.serviceId}`)
                     .then(response => {
                         if (response.data) {
@@ -879,18 +889,25 @@
                                 if (eventId > -1 && item.id === eventId) item.active = true;
                                 if (item.eventType !== 0) this.events.push(item)
                             })
-
-                            console.log('events')
-                            console.log(this.events)
                         }
                     }).catch(error => {
-                    console.log(error.reponse)
+                    this.snackbar = true;
+                    this.message = `Error! ${error.response}`;
+                }).then(() => {
+                    this.loading = false;
+                })
+            },
+            getPdf() {
+                this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
+                    .get(process.env.VUE_APP_API + `/pdf/${this.serviceId}`)
+                    .then(res => {
+                        if (res.data) {
+                            this.pdfEmbedCode = this.renderPdfEmbed(res.data.imageLink, res.data.titleText, res.data.pdfLink);
+                        }
+                    }).catch(error => {
                     this.snackbar = true;
                     this.message = `Error! ${error.response}`;
                 })
-                    .then(() => {
-                        this.loading = false;
-                    })
             },
             saveService(payload) {
                 this.busy = true;
@@ -1462,6 +1479,23 @@
                         })
                 });
             },
+            renderPdfEmbed(imageSrc, title, urlSrc) {
+                return `<center>
+                    <a href="${urlSrc}"
+                       target="_blank">
+                        <br>
+                        <img style="border:0;width:220px;box-shadow: 10px 10px 10px rgba(0,0,0,0.3);margin-bottom: 24px;margin-top: 30px;"
+                             src="${imageSrc}"/>
+                        <br>
+                        <div style=";border: 1px solid #565656b3;max-width: 400px;width: fit-content;padding: 11px 31px;margin-bottom: 40px;font-size: 18px;margin-top: 1px;background: rgba(255,255,255,0.5);font-family: 'Lato';font-weight: 600; color:#333;text-decoration-line:none">
+                           ${title}
+                        </div>
+                    </a>
+                </center>`;
+            },
+            renderEmbed() {
+                return `<link href="https://memoryshareprod.blob.core.windows.net/front-end-assets/app.css" rel="stylesheet" /><script src="https://memoryshareprod.blob.core.windows.net/front-end-assets/app.js"><\/script><memoryshare-stream src="${this.videoSlug}" options='{"fluid": true, "height": null, "width": null, "playerOnly": true}' />`;
+            }
         },
         components: {
             Spinner,

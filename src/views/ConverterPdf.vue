@@ -51,6 +51,7 @@
                                         show-size
                                         label="Upload PDF"
                                         @change="uploadPdf"
+                                        :rules="errorMessage ? [errorMessage]: []"
                                 ></v-file-input>
                             </v-col>
                         </v-row>
@@ -76,18 +77,26 @@
                 <div v-if="tab === 2" class="tab-container">
                     <v-form ref="form" lazy-validation>
                         <div class="header">
-                            <h3 class="title">Type the title of the memorial folder into the text-box. Drag the mouse over the image,
+                            <h3 class="title">Type the title of the memorial folder into the text-box. Drag the mouse
+                                over the image,
                                 to crop the selection. Your selection will be displayed on the webpage.</h3>
                         </div>
                         <v-row>
                             <v-col class="text-center">
-                                <v-text-field v-model="title" label="Title"></v-text-field>
+                                <v-text-field v-model="croppedBody.titleText" label="Title"></v-text-field>
                             </v-col>
                         </v-row>
                         <v-row>
                             <v-col class="text-center">
                                 <a href="javascript:void(0)" class="pdf-page">
-                                    <img :src="imageUrls[selectedPage]"/>
+                                    <cropper
+                                            class="cropper"
+                                            :src="imageUrls[selectedPage]"
+                                            :stencil-props="{
+                                              aspectRatio: 8/5
+                                            }"
+                                            @change="changeCrop"
+                                    ></cropper>
                                 </a>
                             </v-col>
                         </v-row>
@@ -98,7 +107,23 @@
                         </v-row>
                     </v-form>
                 </div>
+                <div v-if="tab === 3" class="tab-container">
+                    <v-form ref="form" lazy-validation>
+                        <div class="header justify-content-center">
+                            <h3 class="title text-center">Your thumbnail is ready for your Website!</h3>
+                        </div>
+                        <v-row>
+                            <v-col class="text-center">
+                                <h5>Copy and Paste the code below into your website</h5>
+                                <embed-modal v-if="embedHtml" :slug="embedHtml"/>
+                            </v-col>
+                        </v-row>
+                    </v-form>
+                </div>
             </div>
+            <v-snackbar v-model="snackbar" :timeout="3000">
+                {{ message }}
+            </v-snackbar>
         </div>
         <Spinner v-if="loading"></Spinner>
     </div>
@@ -106,13 +131,14 @@
 
 <script>
     import Spinner from '../components/Spinner';
-    import {ArrowLeftIcon} from 'vue-feather-icons';
-    // import { Cropper } from 'vue-advanced-cropper';
-    // import 'vue-advanced-cropper/dist/style.css';
+    import {ArrowLeftIcon, CopyIcon} from 'vue-feather-icons';
+    import {Cropper} from 'vue-advanced-cropper';
+    import 'vue-advanced-cropper/dist/style.css';
+    import EmbedModal from '../components/EmbedModal';
 
     export default {
         metaInfo: {
-            title: 'Create PDF',
+            title: 'Converter PDF',
         },
         data() {
             return {
@@ -122,13 +148,36 @@
                 token: null,
                 loading: false,
                 selectedPage: null,
-                title: null
+                title: null,
+                errorMessage: false,
+                message: null,
+                cropInstruction: [],
+                embedHtml: null,
+                snackbar: false,
+                croppedBody: {
+                    serviceId: 0,
+                    titleText: "test's Memorial Folder",
+                    images: [],
+                    selectedImageURL: '',
+                    cropInstruction: {
+                        x: 0,
+                        y: 0,
+                        width: 0,
+                        height: 0,
+                        rotate: 0,
+                        scaleX: 0,
+                        scaleY: 0
+                    }
+                }
             }
         },
 
         components: {
             Spinner,
+            Cropper,
             ArrowLeftIcon,
+            CopyIcon,
+            EmbedModal,
         },
 
         methods: {
@@ -136,7 +185,6 @@
                 this.loading = true;
                 this.$auth.getIdTokenClaims().then(result => {
                     this.token = result.__raw;
-
                     var fd = new FormData();
                     fd.append("File", file);
                     fd.append("ServiceId", this.$route.params.id);
@@ -148,20 +196,61 @@
                             this.loading = false;
                         })
                         .catch(error => {
+                            this.errorMessage = error.response.data;
                             this.imageUrls = [];
                             this.loading = false;
-                            this.errorLoading = true;
                         })
                 })
             },
-            chooseImage(){
-                if (!this.selectedPage){
+            chooseImage() {
+                if (this.selectedPage === null) {
                     return false
                 }
                 this.tab = 2;
             },
-            cropImage(){
-                alert('In the process of development')
+            changeCrop({coordinates}) {
+                this.croppedBody.cropInstruction.width = coordinates.width;
+                this.croppedBody.cropInstruction.height = coordinates.height;
+                this.croppedBody.cropInstruction.x = coordinates.left;
+                this.croppedBody.cropInstruction.y = coordinates.top;
+            },
+            cropImage() {
+                this.croppedBody.serviceId = +this.$route.params.id;
+                this.croppedBody.selectedImageURL = this.imageUrls[this.selectedPage];
+                this.croppedBody.images = this.imageUrls;
+                this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
+                    .post(process.env.VUE_APP_API + '/pdf/crop', this.croppedBody)
+                    .then(res => {
+                        this.embedHtml = this.renderEmbed(res.data.imageLink, res.data.titleText, res.data.pdfLink);
+                        this.loading = false;
+                        this.tab = 3;
+                    })
+                    .catch(error => {
+                        this.errorMessage = error.response.data;
+                        this.loading = false;
+                    });
+            },
+            copyEmbedCode(e) {
+                let textarea = this.$refs.embedCode.$el.querySelector('textarea');
+                textarea.select();
+                document.execCommand('copy');
+                textarea.blur();
+                this.message = 'Embed code copied to your clipboard';
+                this.snackbar = true;
+            },
+            renderEmbed(imageSrc, title, urlSrc) {
+                return `<center>
+                    <a href="${urlSrc}"
+                       target="_blank">
+                        <br>
+                        <img style="border:0;width:220px;box-shadow: 10px 10px 10px rgba(0,0,0,0.3);margin-bottom: 24px;margin-top: 30px;"
+                             src="${imageSrc}"/>
+                        <br>
+                        <div style=";border: 1px solid #565656b3;max-width: 400px;width: fit-content;padding: 11px 31px;margin-bottom: 40px;font-size: 18px;margin-top: 1px;background: rgba(255,255,255,0.5);font-family: 'Lato';font-weight: 600; color:#333;text-decoration-line:none">
+                           ${title}
+                        </div>
+                    </a>
+                </center>`;
             }
         }
     }
@@ -175,7 +264,6 @@
     .view-container {
         width: 64vw;
         margin: auto;
-        // text-align: center;
         position: relative;
         background: #fff;
         z-index: 1;
@@ -509,6 +597,15 @@
     .pdf-page img {
         width: 220px;
         box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3)
+    }
+
+    .v-text-field__slot textarea {
+        color: red !important;
+    }
+
+    .theme--light.v-input textarea {
+        color: red !important;
+        padding: 0 20px;
     }
 
     @keyframes pulse-red {

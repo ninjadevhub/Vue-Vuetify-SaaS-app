@@ -18,7 +18,7 @@ import Billing from '../views/Billing.vue';
 import AdminSettings from '../views/AdminSettings.vue';
 import LiveDashboard from '../views/LiveDashboard.vue';
 import Uploader from '../views/Uploader.vue';
-import CreatePdf from '../views/CreatePdf.vue';
+import ConverterPdf from '../views/ConverterPdf.vue';
 
 import { authGuard } from "../auth/authGuard";
 
@@ -55,9 +55,9 @@ const routes = [
     beforeEnter: authGuard
   },
   {
-    path: "/manage-services/:id/create-pdf",
-    name: "CreatePdf",
-    component: CreatePdf,
+    path: "/manage-services/:id/converter-pdf",
+    name: "ConverterPdf",
+    component: ConverterPdf,
     beforeEnter: authGuard
   },
   {
