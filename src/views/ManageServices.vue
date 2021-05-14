@@ -9,7 +9,7 @@
                 <div v-if="editing">
                     <v-tooltip bottom>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn :disabled="pdfEmbedCode" :to="{ path: `/manage-services/${ serviceId }/converter-pdf` }" v-bind="attrs"
+                            <v-btn :disabled="!!pdfEmbedCode" :to="{ path: `/manage-services/${ serviceId }/converter-pdf` }" v-bind="attrs"
                                    v-on="on" fab color="#9093b6" dark class="mr-2" small>
                                 <file-text-icon size="1.5x"></file-text-icon>
                             </v-btn>
