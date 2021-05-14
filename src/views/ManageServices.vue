@@ -9,7 +9,8 @@
                 <div v-if="editing">
                     <v-tooltip bottom>
                         <template v-slot:activator="{ on, attrs }">
-                            <v-btn :disabled="!!pdfEmbedCode" :to="{ path: `/manage-services/${ serviceId }/converter-pdf` }" v-bind="attrs"
+                            <v-btn :disabled="!!pdfEmbedCode"
+                                   :to="{ path: `/manage-services/${ serviceId }/converter-pdf` }" v-bind="attrs"
                                    v-on="on" fab color="#9093b6" dark class="mr-2" small>
                                 <file-text-icon size="1.5x"></file-text-icon>
                             </v-btn>
@@ -347,6 +348,11 @@
                                                         </v-text-field>
 
                                                         <v-btn block color="primary" class="mb-2">Save</v-btn>
+                                                        <v-btn block color="primary" class="mb-2"
+                                                               @click="startFacebookLiveStream">
+                                                            <v-icon size="2x" left>mdi-facebook</v-icon>
+                                                            Facebook Live Stream
+                                                        </v-btn>
                                                     </v-form>
                                                 </v-tab-item>
                                             </v-tabs-items>
@@ -359,7 +365,7 @@
                                                 <v-tab href="#connections">Connections</v-tab>
                                                 <v-tab :disabled="!liveStreamReady" href="#preview">Live Preview</v-tab>
                                                 <v-tab :disabled="!liveStreamReady" @click="setWowzaChart"
-                                                       href="#options">Health
+                                                       href="#options">H`ealth
                                                 </v-tab>
                                             </v-tabs>
 
@@ -400,6 +406,11 @@
                                                         </v-text-field>
 
                                                         <v-btn block color="primary" class="mb-2">Save</v-btn>
+                                                        <v-btn block color="primary" class="mb-2"
+                                                               @click="startFacebookLiveStream">
+                                                            <v-icon size="2x" left>mdi-facebook</v-icon>
+                                                            Facebook Live Stream
+                                                        </v-btn>
                                                     </v-form>
                                                 </v-tab-item>
 
@@ -607,6 +618,29 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+        <v-dialog v-model="warningFacebookSettings"
+                  persistent
+                  max-width="600">
+            <v-card>
+                <v-card-title class="headline">
+                    Missing General Settings
+                </v-card-title>
+                <v-card-text>
+                    <p>You must fill the following values from settings before you can go live on facebook.</p>
+                    <p class="mb-1">Facebook RTMPS</p>
+                    <p>Facebook Stream Key</p>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="blue darken-1" text @click="warningFacebookSettings = false">
+                        Close
+                    </v-btn>
+                    <v-btn :to="{ name: 'Settings' }" color="primary" text>
+                        Go to settings
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
         <Spinner v-if="loading"></Spinner>
         <Viewer :show="showViewer" :viewSrc="viewerSrc"></Viewer>
@@ -614,7 +648,6 @@
 </template>
 
 <script>
-    import {Datetime} from 'vue-datetime';
     import Spinner from '../components/Spinner';
     import draggable from "vuedraggable";
     import UppyUploader from '../components/UppyUploader';
@@ -681,6 +714,8 @@
                 dragging: false,
                 videoSlug: '',
                 connection: {},
+                userSettings: [],
+                warningFacebookSettings: false,
                 createEvent: {
                     title: '',
                     time: '',
@@ -1495,7 +1530,57 @@
             },
             renderEmbed() {
                 return `<link href="https://memoryshareprod.blob.core.windows.net/front-end-assets/app.css" rel="stylesheet" /><script src="https://memoryshareprod.blob.core.windows.net/front-end-assets/app.js"><\/script><memoryshare-stream src="${this.videoSlug}" options='{"fluid": true, "height": null, "width": null, "playerOnly": true}' />`;
-            }
+            },
+            startFacebookLiveStream() {
+                let facebookSettings = this.getUserSettings();
+                facebookSettings.then((res)=>{
+                    if (!res.facebookRtmps || !res.facebookStreamKey){
+                        this.warningFacebookSettings = true;
+                        return;
+                    }
+                    this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
+                        .post(process.env.VUE_APP_API + `/live/facebook?id=${+this.event.liveStreamId}`)
+                        .then(response => {
+                            console.log(response);
+                            console.log('--- facebook live streaming ---')
+                            // this.triggerLiveStream();
+                        })
+                        .catch(error => {
+                            console.log(error.response);
+                            // this.setSnackBar('Error starting stream')
+                            // this.endLiveStream();
+                        })
+                });
+            },
+            async getUserSettings() {
+                if (this.$auth.role === 'SuperAdmin') {
+                   return await this.axios
+                        .create({headers: {'Authorization': `Bearer ${this.token}`}})
+                        .get(process.env.VUE_APP_API + `/funeralhomes/settings/admin/${this.id}`)
+                        .then(response => {
+                            if (response.data) {
+                                return response.data;
+                            }
+                        })
+                        .catch(error => {
+                            console.log(error)
+                            console.log(error.response)
+                            this.$emit('message', error.response.data)
+                        })
+                } else {
+                    return await this.axios
+                        .create({headers: {'Authorization': `Bearer ${this.token}`}})
+                        .get(process.env.VUE_APP_API + `/funeralhomes/settings/${this.$auth.funeralHomeId}`)
+                        .then(response => {
+                            if (response.data) {
+                                return response.data;
+                            }
+                        })
+                        .catch(error => {
+                            console.log(error)
+                        })
+                }
+            },
         },
         components: {
             Spinner,
