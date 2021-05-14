@@ -74,7 +74,7 @@
                         </v-row>
                     </v-form>
                 </div>
-                <div v-if="tab === 2" class="tab-container">
+                <div v-if="tab !== 3" :class="tab !== 2 ? 'd-none tab-container': 'tab-container'">
                     <v-form ref="form" lazy-validation>
                         <div class="header">
                             <h3 class="title">Type the title of the memorial folder into the text-box. Drag the mouse
@@ -88,16 +88,7 @@
                         </v-row>
                         <v-row>
                             <v-col class="text-center">
-                                <a href="javascript:void(0)" class="pdf-page">
-                                    <cropper
-                                            class="cropper"
-                                            :src="imageUrls[selectedPage]"
-                                            :stencil-props="{
-                                              aspectRatio: 8/5
-                                            }"
-                                            @change="changeCrop"
-                                    ></cropper>
-                                </a>
+                                <div id="crop-image-section"></div>
                             </v-col>
                         </v-row>
                         <v-row>
@@ -107,7 +98,7 @@
                         </v-row>
                     </v-form>
                 </div>
-                <div v-if="tab === 3" class="tab-container">
+                <div v-if="tab === 3">
                     <v-form ref="form" lazy-validation>
                         <div class="header justify-content-center">
                             <h3 class="title text-center">Your thumbnail is ready for your Website!</h3>
@@ -132,9 +123,9 @@
 <script>
     import Spinner from '../components/Spinner';
     import {ArrowLeftIcon, CopyIcon} from 'vue-feather-icons';
-    import {Cropper} from 'vue-advanced-cropper';
-    import 'vue-advanced-cropper/dist/style.css';
     import EmbedModal from '../components/EmbedModal';
+    import Cropper from 'cropperjs';
+    import 'cropperjs/dist/cropper.css';
 
     export default {
         metaInfo: {
@@ -154,6 +145,7 @@
                 cropInstruction: [],
                 embedHtml: null,
                 snackbar: false,
+                cropper: null,
                 croppedBody: {
                     serviceId: 0,
                     titleText: "test's Memorial Folder",
@@ -174,7 +166,6 @@
 
         components: {
             Spinner,
-            Cropper,
             ArrowLeftIcon,
             CopyIcon,
             EmbedModal,
@@ -207,17 +198,32 @@
                     return false
                 }
                 this.tab = 2;
-            },
-            changeCrop({coordinates}) {
-                this.croppedBody.cropInstruction.width = coordinates.width;
-                this.croppedBody.cropInstruction.height = coordinates.height;
-                this.croppedBody.cropInstruction.x = coordinates.left;
-                this.croppedBody.cropInstruction.y = coordinates.top;
+
+                let cropImageSection = document.getElementById("crop-image-section");
+
+                let img = document.createElement("img");
+                img.src = this.imageUrls[this.selectedPage];
+                img.id = 'crop-image';
+                img.style.maxWidth = "100%";
+
+                cropImageSection.appendChild(img);
+                let self = this;
+                this.cropper = new Cropper(img, {
+                    crop(event) {
+                        self.croppedBody.cropInstruction.x = Math.floor(event.detail.x);
+                        self.croppedBody.cropInstruction.y = Math.floor(event.detail.y);
+                        self.croppedBody.cropInstruction.width = Math.floor(event.detail.width);
+                        self.croppedBody.cropInstruction.height = Math.floor(event.detail.height);
+                        self.croppedBody.cropInstruction.scaleX = Math.floor(event.detail.scaleX);
+                        self.croppedBody.cropInstruction.scaleY = Math.floor(event.detail.scaleY);
+                    }
+                });
             },
             cropImage() {
                 this.croppedBody.serviceId = +this.$route.params.id;
                 this.croppedBody.selectedImageURL = this.imageUrls[this.selectedPage];
                 this.croppedBody.images = this.imageUrls;
+
                 this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
                     .post(process.env.VUE_APP_API + '/pdf/crop', this.croppedBody)
                     .then(res => {
