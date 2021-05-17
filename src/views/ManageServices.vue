@@ -348,10 +348,10 @@
                                                         </v-text-field>
 
                                                         <v-btn block color="primary" class="mb-2">Save</v-btn>
-                                                        <v-btn block color="primary" class="mb-2"
+                                                        <v-btn block :color="facebookLiveStreamButtonType" class="mb-2"
                                                                @click="startFacebookLiveStream">
                                                             <v-icon size="2x" left>mdi-facebook</v-icon>
-                                                            Facebook Live Stream
+                                                            {{FacebookLiveStreamButtonText}}
                                                         </v-btn>
                                                     </v-form>
                                                 </v-tab-item>
@@ -406,10 +406,10 @@
                                                         </v-text-field>
 
                                                         <v-btn block color="primary" class="mb-2">Save</v-btn>
-                                                        <v-btn block color="primary" class="mb-2"
+                                                        <v-btn block :color="facebookLiveStreamButtonType" class="mb-2"
                                                                @click="startFacebookLiveStream">
                                                             <v-icon size="2x" left>mdi-facebook</v-icon>
-                                                            Facebook Live Stream
+                                                            {{facebookLiveStreamButtonText}}
                                                         </v-btn>
                                                     </v-form>
                                                 </v-tab-item>
@@ -623,10 +623,10 @@
                   max-width="600">
             <v-card>
                 <v-card-title class="headline">
-                    Missing General Settings
+                    {{warningFacebookSettingsDialogTitle}}
                 </v-card-title>
                 <v-card-text>
-                    <p>You must fill the following values from settings before you can go live on facebook.</p>
+                    <p>{{wrongSettingsMessage}}</p>
                     <p class="mb-1">Facebook RTMPS</p>
                     <p>Facebook Stream Key</p>
                 </v-card-text>
@@ -716,6 +716,11 @@
                 connection: {},
                 userSettings: [],
                 warningFacebookSettings: false,
+                wrongSettingsMessage: null,
+                warningFacebookSettingsDialogTitle: null,
+                facebookStreamStarted: false,
+                facebookLiveStreamButtonText: 'Facebook Live Stream',
+                facebookLiveStreamButtonType: 'primary',
                 createEvent: {
                     title: '',
                     time: '',
@@ -1533,28 +1538,31 @@
             },
             startFacebookLiveStream() {
                 let facebookSettings = this.getUserSettings();
-                facebookSettings.then((res)=>{
-                    if (!res.facebookRtmps || !res.facebookStreamKey){
+                facebookSettings.then((res) => {
+                    if (!res.facebookRtmps || !res.facebookStreamKey) {
                         this.warningFacebookSettings = true;
+                        this.warningFacebookSettingsDialogTitle = 'Missing General Settings';
+                        this.wrongSettingsMessage = 'You must fill the following values from settings before you can go live on facebook.';
                         return;
                     }
                     this.axios.create({headers: {'Authorization': `Bearer ${this.token}`}})
                         .post(process.env.VUE_APP_API + `/live/facebook?id=${+this.event.liveStreamId}`)
                         .then(response => {
-                            console.log(response);
-                            console.log('--- facebook live streaming ---')
-                            // this.triggerLiveStream();
+                            this.warningFacebookSettings = false;
+                            this.facebookStreamStarted = true;
+                            this.facebookLiveStreamButtonText = 'Facebook Live Stream Started';
+                            this.facebookLiveStreamButtonType = 'success';
                         })
                         .catch(error => {
-                            console.log(error.response);
-                            // this.setSnackBar('Error starting stream')
-                            // this.endLiveStream();
+                            this.warningFacebookSettings = true;
+                            this.warningFacebookSettingsDialogTitle = 'Wrong General Settings';
+                            this.wrongSettingsMessage = error.response.data;
                         })
                 });
             },
             async getUserSettings() {
                 if (this.$auth.role === 'SuperAdmin') {
-                   return await this.axios
+                    return await this.axios
                         .create({headers: {'Authorization': `Bearer ${this.token}`}})
                         .get(process.env.VUE_APP_API + `/funeralhomes/settings/admin/${this.id}`)
                         .then(response => {
