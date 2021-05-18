@@ -219,7 +219,7 @@
                         <div class="mt-2 mb-6">
                             <v-btn v-if="!busy && !uploadingPlaceholderImg" @click.prevent="saveService($data)" block
                                    color="#0C3C60" dark large class="save-btn">{{ editing ? 'Update Service' :
-                                'SaveService' }}
+                                'Save Service' }}
                             </v-btn>
                             <v-btn v-else block disabled class="ml-3 save-btn">
                                 <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -580,9 +580,9 @@
                 <h5>Embed code</h5>
                 <embed-modal v-if="videoSlug" :slug="embedVideoSlug"/>
             </div>
-            <div v-if="editing" class="view-container mt-5">
+            <div v-if="editing && pdfEmbedCode" class="view-container mt-5">
                 <h5>Copy this Code to Embed your PDF</h5>
-                <embed-modal v-if="pdfEmbedCode" :slug="pdfEmbedCode"/>
+                <embed-modal :slug="pdfEmbedCode"/>
             </div>
 
             <ServiceBillingCharts v-if="editing" :id="$route.params.id" :token="token" ref="billingCharts"/>
