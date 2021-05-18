@@ -365,7 +365,7 @@
                                                 <v-tab href="#connections">Connections</v-tab>
                                                 <v-tab :disabled="!liveStreamReady" href="#preview">Live Preview</v-tab>
                                                 <v-tab :disabled="!liveStreamReady" @click="setWowzaChart"
-                                                       href="#options">H`ealth
+                                                       href="#options">Health
                                                 </v-tab>
                                             </v-tabs>
 
