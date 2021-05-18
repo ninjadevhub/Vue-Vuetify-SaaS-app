@@ -24,18 +24,17 @@ export default {
     },
     created(){
         this.$store.dispatch('toggleTopNav');
-        let externalScript = document.createElement('script')
-        externalScript.setAttribute('src', 'https://memoryshareprod.blob.core.windows.net/front-end-assets/app.js')
-        document.head.appendChild(externalScript)
-        setTimeout(() => {
+        let externalScript = document.createElement('script');
+        externalScript.setAttribute('src', 'https://memoryshareprod.blob.core.windows.net/front-end-assets/app.js');
+        document.head.appendChild(externalScript);
+        externalScript.addEventListener('load', () => {
             this.ready = true;
-        }, 1000);
-
-        if (this.$auth.role === 'FuneralHome' || this.$auth.role === 'SuperAdmin') {
-            this.$auth.getIdTokenClaims().then(result => {
-                  this.token = result.__raw;
-            });
-        }
+            if (this.$auth.role === 'FuneralHome' || this.$auth.role === 'SuperAdmin') {
+                this.$auth.getIdTokenClaims().then(result => {
+                    this.token = result.__raw;
+                });
+            }
+        });
     }
 }
 </script>

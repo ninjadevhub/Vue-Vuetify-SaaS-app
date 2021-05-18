@@ -1,8 +1,8 @@
 <template>
 <div>
     <div v-show="!loading">
-        <div v-if="!hideMenu" :class="[{ 'live-padding': live }, 
-                                       { 'created-container': service.serviceState === 0 || service.serviceState === 1 }, 
+        <div v-if="!hideMenu" :class="[{ 'live-padding': live },
+                                       { 'created-container': service.serviceState === 0 || service.serviceState === 1 },
                                        { 'private': blocked },
                                        'video-container', 'd-flex']">
                 <div v-show="!live" class="video-options">
@@ -22,10 +22,10 @@
                                     <loader-icon v-if="item.active && (videoStatus === 'Loading' || videoStatus === 'Preparing next video' )" class="play ease spin"></loader-icon>
                                 </span>
                             </div>
- 
+
                             <div class="options-content d-inline-block">
                                 <small v-if="!item.active && item.convertedVideo && index === (currentVideoIndex + 1)" class="next-in-queue">Next in queue</small>
-                                <h6 :class="[{ 'upcoming': !item.convertedVideo }, 'mb-0']">{{ item.title }}</h6> 
+                                <h6 :class="[{ 'upcoming': !item.convertedVideo }, 'mb-0']">{{ item.title }}</h6>
                                 <small v-if="item.time !== minDate" class="time-callout">{{ item.time | moment("lll") }}</small>
                                 <small v-if="item.time === minDate && item.eventType !== 0" class="time-callout">awaiting time</small>
                                 <p v-if="item.private" class="mb-0" style="opacity: .7; font-size: .7rem">PRIVATE</p>
@@ -60,19 +60,19 @@
                                 <!-- upcoming -->
                                 <span class="event-icon">
                                     <clock-icon v-if="!item.convertedVideo && !item.live" class="upcoming ease"></clock-icon>
-                                     <span v-else class="live-callout">LIVE</span> 
+                                     <span v-else class="live-callout">LIVE</span>
                                 </span>
                             </div>
 
                              <div class="options-content d-inline-block">
-                                <h6 :class="[{ 'upcoming': !item.convertedVideo }, 'mb-0']">{{ item.title }}</h6> 
+                                <h6 :class="[{ 'upcoming': !item.convertedVideo }, 'mb-0']">{{ item.title }}</h6>
                                 <small v-if="item.time !== minDate" class="time-callout">{{ item.time | moment("lll") }}</small>
                                 <small v-else class="time-callout">awaiting time</small>
                             </div>
                         </li>
                     </ul>
                 </div>
-                
+
                 <div class="private-callout">
                     <h2>This is a Private Viewing</h2>
                     <h4>Please enter to PIN to view</h4>
@@ -92,7 +92,7 @@
                     <!-- <v-progress-circular :size="50" color="primary" indeterminate></v-progress-circular> -->
                     <p class="mt-4" style="color: #fff">Waiting for stream to start...</p>
                 </div>
-                
+
             </div>
 
             <div v-else>
@@ -165,7 +165,7 @@ export default {
     },
     methods: {
         initVideoJs() {
-            let _ = this;      
+            let _ = this;
 
             this.options = {
                 autoplay: false,
@@ -200,14 +200,13 @@ export default {
                 // optional for Facebook
                 redirectUri: window.location.href + '#close',
                 // optional for VK
-                isVkParse: true,        
+                isVkParse: true,
                 // optinal embed code
                 embedCode : '<iframe src="' + window.location.href + '" width="560" height="315" frameborder="0" allowfullscreen></iframe>'
             }
 
-
             this.player = videojs(this.$refs.videoPlayer, this.options, function onPlayerReady() {
-                _.setServiceState(); 
+                _.setServiceState();
 
                 let liveTile = this.addChild('Component', {})
                 liveTile.addClass('live-tile')
@@ -277,8 +276,8 @@ export default {
             console.log('set live streaem')
             console.log(this.liveObject)
             console.log(this.skipLivePreview)
-            
-            //this.liveObject.eventStatus === 1 && 
+
+            //this.liveObject.eventStatus === 1 &&
             if (this.liveObject.eventStatus !== 3 && this.skipLivePreview) {
                 this.setPreviewText(this.liveObject.previewText || 'Stream starting soon')
                 return
@@ -304,22 +303,22 @@ export default {
             console.log('****** SEREVICE STATE ' + this.service.serviceState)
 
             switch(this.service.serviceState) {
-                case 0: 
+                case 0:
                     this.setCreated();
                     //hide comments
                     break;
-                case 1: 
+                case 1:
                     this.setCreated();
                     //hide comments
                     break;
-                case 2: 
+                case 2:
                     this.goLive();
                     break;
-                case 4: 
+                case 4:
                     this.loading = true;
                     this.setVideoList(true);
                     break;
-                case 6: 
+                case 6:
                     this.goLive();
                     break;
                 default:
@@ -329,7 +328,7 @@ export default {
             }
         },
         setCreated() {
-            this.loading = false;  
+            this.loading = false;
             this.player.hide();
         },
         trackTime() {
@@ -345,7 +344,7 @@ export default {
             let now = new Date().toISOString();
             this.sortedEvents.splice(0);
 
-            this.events.forEach((item, index) => {   
+            this.events.forEach((item, index) => {
                 if (item.convertedVideo || item.liveURL) {
                     // add to sorted events
                     this.sortedEvents.push(item);
@@ -365,8 +364,8 @@ export default {
                     return (a===null)-(b===null) || -(new Date(a.time).getTime()>new Date(b.time).getTime())||+(new Date(a.time).getTime()<new Date(b.time).getTime());
                 });
 
-                if (!this.live && index === (this.events.length - 1)) this.loading = false;  
-     
+                if (!this.live && index === (this.events.length - 1)) this.loading = false;
+
             })
 
             // let tributeVideo = this.events.find(x => x.eventType === 0);
@@ -393,7 +392,7 @@ export default {
 
             this.sortedEvents.forEach(item => item.active = false);
             if (this.sortedEvents[index]) {
-                this.sortedEvents[index].active = true;  
+                this.sortedEvents[index].active = true;
                 this.currentEvent = this.sortedEvents[index];
                 //UNCOMMENT FOR COMMENTS
                 //this.$emit('updateId', this.currentEvent.id);
@@ -401,14 +400,14 @@ export default {
                 if (this.currentEvent.private && !this.currentEvent.convertedVideo) {
                     this.blocked = true
                 } else {
-                    this.player.src({ 
-                        type: this.sortedEvents[index].live ? 'application/x-mpegURL' : 'video/mp4', 
+                    this.player.src({
+                        type: this.sortedEvents[index].live ? 'application/x-mpegURL' : 'video/mp4',
                         src: this.sortedEvents[index].live ? this.sortedEvents[index].liveURL : this.sortedEvents[index].convertedVideo
                     })
 
-                    if (autoStart) this.player.play(); 
+                    if (autoStart) this.player.play();
                 }
-            }   
+            }
         },
         trackAnalytics(paused) {
             if (this.durationTotal > this.player.duration()) {
@@ -427,7 +426,7 @@ export default {
             this.axios
                 .post(`https://api.memoryshare.com/api/dogs/track`, data)
                 .then(response => {
-                    
+
                 })
                 .catch(error => {
                     console.log(error)
@@ -441,10 +440,10 @@ export default {
             this.liveObject = this.events.find(x => x.id === this.service.currentLiveEventId);
             if (this.liveObject.private) this.blocked = true;
             this.awaitingLiveStream = true;
-            // this.startStreamBuffer();
+            this.startStreamBuffer();
             this.setLiveSteam();
             // UNCOMMENT FOR COMMENTS
-            //this.$emit('updateId', this.service.currentLiveEventId)  
+            //this.$emit('updateId', this.service.currentLiveEventId)
             console.log('live object', this.liveObject)
 
         },
@@ -464,8 +463,8 @@ export default {
                     }
 
                     // set video
-                    this.player.src({ 
-                        type: eventItem.live ? 'application/x-mpegURL' : 'video/mp4', 
+                    this.player.src({
+                        type: eventItem.live ? 'application/x-mpegURL' : 'video/mp4',
                         src: eventItem.live ? eventItem.liveURL : eventItem.convertedVideo
                     })
                 })
@@ -841,7 +840,7 @@ export default {
         margin-right: 2.5vw;
         overflow-y: auto;
         order: 1;
-        
+
         ul {
             padding: 0 !important;
             list-style: none;
@@ -940,7 +939,7 @@ export default {
             margin: 1rem auto;
             border-radius: 12px;
             padding: 1rem;
-            
+
             input {
                 font-size: 2rem;
                 letter-spacing: 2px;
@@ -1034,5 +1033,5 @@ export default {
         }
     }
 
-    
+
 </style>

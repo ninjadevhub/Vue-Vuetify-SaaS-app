@@ -351,7 +351,7 @@
                                                         <v-btn block :color="facebookLiveStreamButtonType" class="mb-2"
                                                                @click="startFacebookLiveStream">
                                                             <v-icon size="2x" left>mdi-facebook</v-icon>
-                                                            {{FacebookLiveStreamButtonText}}
+                                                            {{facebookLiveStreamButtonText}}
                                                         </v-btn>
                                                     </v-form>
                                                 </v-tab-item>
